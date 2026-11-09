@@ -1,0 +1,22 @@
+# Scala / sbt
+target/
+project/target/
+project/project/
+.bsp/
+.bloop/
+.metals/
+*.class
+
+# IntelliJ
+.idea/
+*.iml
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Logs y temporales
+*.log
+checkpoint/

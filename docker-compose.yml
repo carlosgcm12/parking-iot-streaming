@@ -1,0 +1,99 @@
+version: "3.8"
+
+# ---------------------------------------------------------------------------
+# Reto IoT - Ecosistema de aparcamiento urbano en Malaga
+# Servicios: Kafka (KRaft, sin Zookeeper) + Kafka UI + Elasticsearch + Kibana
+# Spark corre FUERA de Docker (desde IntelliJ), conectandose a
+# localhost:9092 (Kafka) y localhost:9200 (Elasticsearch)
+# ---------------------------------------------------------------------------
+
+services:
+
+  # --------------------------- KAFKA (KRaft) ---------------------------
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: parking-kafka
+    ports:
+      - "9092:9092"        # listener para clientes externos (generadores Python, Spark)
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://kafka:19092,CONTROLLER://kafka:9093,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: "parking-iot-cluster-2026"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - parking-net
+
+  # ------------------------- KAFKA UI (opcional) ------------------------
+  # Util para ver visualmente los 3 topics y comprobar que las fuentes
+  # generan formatos distintos (punto 4 de la demostracion del reto).
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: parking-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: parking-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+    networks:
+      - parking-net
+
+  # ----------------------------- ELASTICSEARCH ---------------------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: parking-elasticsearch
+    environment:
+      - node.name=es01
+      - discovery.type=single-node
+      - xpack.security.enabled=false        # simplifica la practica; en produccion iria activado
+      - xpack.security.http.ssl.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - parking-net
+
+  # -------------------------------- KIBANA --------------------------------
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.3
+    container_name: parking-kibana
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - parking-net
+
+networks:
+  parking-net:
+    driver: bridge
+
+volumes:
+  kafka_data:
+  es_data:

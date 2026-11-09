@@ -1,0 +1,68 @@
+{
+  "index_patterns": ["parking-*"],
+  "priority": 500,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "index.lifecycle.name": "parking-ilm-policy",
+      "index.lifecycle.rollover_alias": "parking"
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "event": {
+          "properties": {
+            "id":       { "type": "keyword" },
+            "type":     { "type": "keyword" },
+            "source":   { "type": "keyword" },
+            "severity": { "type": "keyword" }
+          }
+        },
+        "device": {
+          "properties": {
+            "id":           { "type": "keyword" },
+            "type":         { "type": "keyword" },
+            "manufacturer": { "type": "keyword" }
+          }
+        },
+        "location": {
+          "properties": {
+            "point": { "type": "geo_point" },
+            "site":     { "type": "keyword" },
+            "city":     { "type": "keyword" },
+            "distrito": { "type": "keyword" }
+          }
+        },
+        "parking": {
+          "properties": {
+            "plazas_totales":            { "type": "integer" },
+            "plazas_libres":             { "type": "integer" },
+            "ocupacion_pct":             { "type": "float" },
+            "tarifa_hora_base_eur":      { "type": "float" },
+            "tarifa_hora_dinamica_eur":  { "type": "float" },
+            "tarifa_aplicada":           { "type": "keyword" },
+            "battery_pct":               { "type": "float" },
+            "tipo_plaza":                { "type": "keyword" },
+            "tipo_ubicacion":            { "type": "keyword" },
+            "referencia":                { "type": "keyword" },
+            "accion":                    { "type": "keyword" },
+            "duracion_total_min":        { "type": "integer" },
+            "duracion_facturable_min":   { "type": "integer" },
+            "importe_eur":               { "type": "float" }
+          }
+        },
+        "status": {
+          "type": "keyword"
+        }
+      }
+    }
+  },
+  "_meta": {
+    "descripcion": "Template para los indices del reto IoT de aparcamiento urbano de Malaga. Aplica a cualquier indice que empiece por parking-*.",
+    "proyecto": "streaming-iot-parking-malaga"
+  }
+}
